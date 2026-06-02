@@ -1,0 +1,67 @@
+{
+  "name": "header-helper",
+  "displayName": "Header Helper",
+  "description": "Turn // >[text] into editable ASCII box section headers",
+  "version": "0.1.0",
+  "publisher": "terminalsin",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/terminalsin/vscode-header-helper.git"
+  },
+  "bugs": {
+    "url": "https://github.com/terminalsin/vscode-header-helper/issues"
+  },
+  "homepage": "https://github.com/terminalsin/vscode-header-helper#readme",
+  "keywords": [
+    "header",
+    "comment",
+    "ascii",
+    "section",
+    "box",
+    "markdown"
+  ],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Formatters"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Header Helper",
+      "properties": {
+        "headerHelper.innerWidth": {
+          "type": "number",
+          "default": 70,
+          "minimum": 20,
+          "maximum": 120,
+          "description": "Inner width of the ASCII box (characters between the vertical borders)."
+        },
+        "headerHelper.uppercase": {
+          "type": "boolean",
+          "default": true,
+          "description": "Render header text in uppercase inside the box."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.1",
+    "typescript": "^5.3.3"
+  }
+}
