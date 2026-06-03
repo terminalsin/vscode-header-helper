@@ -2,6 +2,8 @@
 
 VS Code extension that turns section header markers into ASCII box comments.
 
+Install from [Open VSX](https://open-vsx.org/extension/terminalsin/header-helper) (VSCodium, Gitpod, etc.) or build from source.
+
 ## Usage
 
 Type one or more consecutive marker lines (each must start with `// >`):
