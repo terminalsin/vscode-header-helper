@@ -2,7 +2,7 @@
 
 [Open VSX](https://open-vsx.org/) is the extension registry used by VSCodium, Gitpod, Eclipse Theia, and other VS Code–compatible editors.
 
-Publisher namespace: **terminalsin** (must match `publisher` in `package.json`).
+Publisher namespace: **blackswan** (must match `publisher` in `package.json`).
 
 ## One-time setup
 
@@ -10,7 +10,7 @@ Publisher namespace: **terminalsin** (must match `publisher` in `package.json`).
 2. Sign the [Eclipse Contributor Agreement](https://www.eclipse.org/legal/eca/) if prompted (required for publishing).
 3. Create the namespace (first time only):
    - [User settings → Namespaces](https://open-vsx.org/user-settings/namespaces), or
-   - CLI: `npx ovsx create-namespace terminalsin -p YOUR_TOKEN`
+   - CLI: `npx ovsx create-namespace blackswan -p YOUR_TOKEN`
 4. Create a [Personal Access Token](https://open-vsx.org/user-settings/tokens) with publish scope.
 
 ## Publish from your machine
@@ -37,4 +37,4 @@ npx ovsx publish header-helper-0.2.0.vsix -p YOUR_TOKEN
 
 After publish, the extension appears at:
 
-https://open-vsx.org/extension/terminalsin/header-helper
+https://open-vsx.org/extension/blackswan/header-helper

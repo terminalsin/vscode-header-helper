@@ -3,7 +3,7 @@
   "displayName": "Header Helper",
   "description": "Turn // >[text] into editable ASCII box section headers",
   "version": "0.2.0",
-  "publisher": "terminalsin",
+  "publisher": "blackswan",
   "license": "MIT",
   "repository": {
     "type": "git",

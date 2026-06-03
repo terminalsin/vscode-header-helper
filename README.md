@@ -2,7 +2,7 @@
 
 VS Code extension that turns section header markers into ASCII box comments.
 
-Install from [Open VSX](https://open-vsx.org/extension/terminalsin/header-helper) (VSCodium, Gitpod, etc.) or build from source.
+Install from [Open VSX](https://open-vsx.org/extension/blackswan/header-helper) (VSCodium, Gitpod, etc.) or build from source.
 
 ## Usage
 
@@ -70,4 +70,4 @@ Press F5 in VS Code to launch an Extension Development Host.
 
 ## Install
 
-Search **Header Helper** in the VS Code Extensions view, or install from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=terminalsin.header-helper).
+Search **Header Helper** in the VS Code Extensions view, or install from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=blackswan.header-helper) if listed there.
