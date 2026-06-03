@@ -2,7 +2,7 @@
   "name": "header-helper",
   "displayName": "Header Helper",
   "description": "Turn // >[text] into editable ASCII box section headers",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "terminalsin",
   "license": "MIT",
   "repository": {
@@ -36,20 +36,114 @@
     "configuration": {
       "title": "Header Helper",
       "properties": {
+        "headerHelper.length": {
+          "type": "number",
+          "default": 70,
+          "minimum": 20,
+          "maximum": 120,
+          "scope": "resource",
+          "description": "Inner width of the ASCII box (characters between the vertical borders)."
+        },
+        "headerHelper.align": {
+          "type": "string",
+          "enum": [
+            "center",
+            "left",
+            "right"
+          ],
+          "default": "center",
+          "scope": "resource",
+          "description": "Horizontal alignment of the title inside the box."
+        },
         "headerHelper.innerWidth": {
           "type": "number",
           "default": 70,
           "minimum": 20,
           "maximum": 120,
-          "description": "Inner width of the ASCII box (characters between the vertical borders)."
+          "scope": "resource",
+          "markdownDeprecationMessage": "Use **headerHelper.length** instead.",
+          "description": "Deprecated. Use headerHelper.length."
         },
         "headerHelper.uppercase": {
           "type": "boolean",
-          "default": true,
-          "description": "Render header text in uppercase inside the box."
+          "default": false,
+          "scope": "resource",
+          "description": "Show header text in uppercase inside the ASCII box.",
+          "markdownDescription": "When enabled, the title inside the box is uppercased (e.g. `Constants` → `CONSTANTS`). The `// >[text]` marker always keeps the casing you type."
         }
       }
-    }
+    },
+    "commands": [
+      {
+        "command": "header-helper.deleteLeft",
+        "title": "Header Helper: Delete Left (content only)"
+      },
+      {
+        "command": "header-helper.deleteRight",
+        "title": "Header Helper: Delete Right (content only)"
+      },
+      {
+        "command": "header-helper.deleteAllLeft",
+        "title": "Header Helper: Delete to Content Start"
+      },
+      {
+        "command": "header-helper.deleteAllRight",
+        "title": "Header Helper: Delete to Content End"
+      },
+      {
+        "command": "header-helper.deleteWordLeft",
+        "title": "Header Helper: Delete Word Left (content only)"
+      },
+      {
+        "command": "header-helper.deleteWordRight",
+        "title": "Header Helper: Delete Word Right (content only)"
+      },
+      {
+        "command": "header-helper.insertMarkerLine",
+        "title": "Header Helper: New Marker Line"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "header-helper.deleteLeft",
+        "key": "backspace",
+        "when": "editorTextFocus && headerHelper.focusInHeader"
+      },
+      {
+        "command": "header-helper.deleteRight",
+        "key": "delete",
+        "when": "editorTextFocus && headerHelper.focusInHeader"
+      },
+      {
+        "command": "header-helper.deleteAllLeft",
+        "key": "ctrl+backspace",
+        "mac": "cmd+backspace",
+        "when": "editorTextFocus && headerHelper.focusInHeader"
+      },
+      {
+        "command": "header-helper.deleteAllRight",
+        "key": "ctrl+delete",
+        "mac": "cmd+delete",
+        "when": "editorTextFocus && headerHelper.focusInHeader"
+      },
+      {
+        "command": "header-helper.deleteWordLeft",
+        "key": "alt+backspace",
+        "mac": "alt+backspace",
+        "when": "editorTextFocus && headerHelper.focusInHeader"
+      },
+      {
+        "command": "header-helper.deleteWordRight",
+        "key": "alt+delete",
+        "mac": "alt+delete",
+        "when": "editorTextFocus && headerHelper.focusInHeader"
+      },
+      {
+        "command": "header-helper.insertMarkerLine",
+        "key": "enter",
+        "when": "editorTextFocus && headerHelper.collapsedEdit"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
