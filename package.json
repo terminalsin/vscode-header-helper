@@ -2,7 +2,7 @@
   "name": "header-helper",
   "displayName": "Header Helper",
   "description": "Turn // >[text] into editable ASCII box section headers",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "blackswan",
   "license": "MIT",
   "repository": {

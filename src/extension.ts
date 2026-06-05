@@ -1,12 +1,14 @@
 import * as vscode from "vscode";
 import {
   BoxBlock,
+  blockIndent,
   extractLinesFromBlock,
   findBlockAtLine,
   findMarkerBlockWithPending,
   isExpandedBox,
   isMarkerBlock,
   markerBlockReadyToExpand,
+  markerContentRange,
   markerLines,
   selectionInMarkerBlock,
   offsetInBoxMiddleLine,
@@ -31,6 +33,7 @@ import {
   commitPendingHeaderEdits,
   registerSaveOnBlur,
   type CollapsedState,
+  type CursorPlacement,
 } from "./saveOnBlur";
 
 let applyingEdit = false;
@@ -39,6 +42,8 @@ let skipCollapseOnce = false;
 
 /** URI -> collapsed marker block being edited */
 const activeCollapsed = new Map<string, CollapsedState>();
+/** URI -> previous cursor line (keyboard entry detection). */
+const lastCursorLine = new Map<string, number>();
 /** URI -> expanded box block the cursor was last inside */
 const activeBox = new Map<string, BoxBlock & { cursorLine: number; titleIndex: number }>();
 /** URI -> in-file marker being typed before first expand */
@@ -83,15 +88,19 @@ function captureCursorAnchor(
   };
 }
 
-/** Place the caret on the first line after the box bottom border. */
+/** Place the caret after the box, optionally keeping extra lines/character from marker exit. */
 function placeCursorBelowBox(
   editor: vscode.TextEditor,
-  block: BoxBlock
+  block: BoxBlock,
+  placement: CursorPlacement = {}
 ): void {
   const doc = editor.document;
-  const below = block.endLine + 1;
+  const linesBelowEnd = placement.linesBelowEnd ?? 0;
+  const below = block.endLine + 1 + linesBelowEnd;
   if (below < doc.lineCount) {
-    const pos = new vscode.Position(below, 0);
+    const lineText = doc.lineAt(below).text;
+    const character = placement.character ?? 0;
+    const pos = new vscode.Position(below, Math.min(character, lineText.length));
     editor.selection = new vscode.Selection(pos, pos);
     return;
   }
@@ -157,18 +166,20 @@ async function expandBlock(
   editor: vscode.TextEditor,
   block: BoxBlock,
   cursor?: CursorAnchor,
-  placeCursor: boolean | "below" = true,
-  restoreRendered?: string[]
+  placeCursor: boolean | "below" | "preserve" = true,
+  restoreRendered?: string[],
+  placement?: CursorPlacement
 ): Promise<void> {
   const key = uriKey(editor.document);
   const doc = editor.document;
   const anchor =
     cursor ??
     captureCursorAnchor(doc, block, editor.selection.active);
+  const indent = blockIndent(doc, block);
   const rendered =
     restoreRendered && restoreRendered.length > 0
       ? restoreRendered
-      : renderBoxLines(block.lines, block.style, block.overrides);
+      : renderBoxLines(block.lines, block.style, block.overrides, indent);
   const target: "marker" | "middle" = "middle";
   const lineOffset = Math.max(
     0,
@@ -191,7 +202,7 @@ async function expandBlock(
   const fresh = findBlockAtLine(doc, block.startLine);
   if (fresh && isExpandedBox(doc, fresh)) {
     if (placeCursor === "below") {
-      placeCursorBelowBox(editor, fresh);
+      placeCursorBelowBox(editor, fresh, placement);
     } else if (placeCursor === true) {
       const pos = editor.selection.active;
       if (pos.line <= fresh.startLine || pos.line >= fresh.endLine) {
@@ -223,7 +234,8 @@ async function collapseBlock(
   const savedRendered = isExpandedBox(doc, block)
     ? linesInRange(doc, block.startLine, block.endLine)
     : undefined;
-  const marker = markerLines(lines, block.style, overrides);
+  const indent = blockIndent(doc, block);
+  const marker = markerLines(lines, block.style, overrides, indent);
   const expectedMarkerLines = [...marker];
   const markerAnchor: CursorAnchor = isExpandedBox(doc, block)
     ? { line: block.startLine + (anchor.line - block.startLine - 1), titleIndex: anchor.titleIndex }
@@ -315,15 +327,68 @@ function headerState() {
   };
 }
 
+function isMouseSelectionChange(
+  e: vscode.TextEditorSelectionChangeEvent
+): boolean {
+  return e.kind === vscode.TextEditorSelectionChangeKind.Mouse;
+}
+
+function isKeyboardSelectionChange(
+  e: vscode.TextEditorSelectionChangeEvent
+): boolean {
+  return e.kind === vscode.TextEditorSelectionChangeKind.Keyboard;
+}
+
+/** True when arrow keys moved onto a box title row from outside the title rows. */
+function keyboardEnteredExpandedBoxMiddle(
+  doc: vscode.TextDocument,
+  block: BoxBlock,
+  cursorLine: number,
+  prevLine: number | undefined
+): boolean {
+  if (prevLine === undefined || prevLine === cursorLine) {
+    return false;
+  }
+  if (cursorLine <= block.startLine || cursorLine >= block.endLine) {
+    return false;
+  }
+  if (parseBoxMiddle(doc.lineAt(cursorLine).text) === null) {
+    return false;
+  }
+  if (prevLine < block.startLine || prevLine > block.endLine) {
+    return true;
+  }
+  if (prevLine <= block.startLine || prevLine >= block.endLine) {
+    return true;
+  }
+  return parseBoxMiddle(doc.lineAt(prevLine).text) === null;
+}
+
+function shouldCollapseExpandedBox(
+  e: vscode.TextEditorSelectionChangeEvent,
+  doc: vscode.TextDocument,
+  block: BoxBlock,
+  cursorLine: number,
+  prevLine: number | undefined
+): boolean {
+  if (isMouseSelectionChange(e)) {
+    return true;
+  }
+  return (
+    isKeyboardSelectionChange(e) &&
+    keyboardEnteredExpandedBoxMiddle(doc, block, cursorLine, prevLine)
+  );
+}
+
 async function onSelectionChange(e: vscode.TextEditorSelectionChangeEvent): Promise<void> {
   if (applyingEdit || e.textEditor.document.uri.scheme !== "file") {
     return;
   }
 
   const editor = e.textEditor;
+  const key = uriKey(editor.document);
   try {
   const doc = editor.document;
-  const key = uriKey(doc);
   const sel = editor.selection;
   const cursorLine = sel.active.line;
 
@@ -333,7 +398,33 @@ async function onSelectionChange(e: vscode.TextEditorSelectionChangeEvent): Prom
       syncCollapsedEndLine(doc, prevCollapsed);
       const collapsedBlock = findBlockAtLine(doc, sel.active.line);
       if (collapsedBlock) {
-        const anchor = captureCursorAnchor(doc, collapsedBlock, sel.active);
+        if (
+          isKeyboardSelectionChange(e) &&
+          isMarkerBlock(doc, collapsedBlock)
+        ) {
+          const lineText = doc.lineAt(sel.active.line).text;
+          const content = markerContentRange(lineText);
+          if (content) {
+            const character = Math.max(
+              content.start,
+              Math.min(sel.active.character, content.end)
+            );
+            if (character !== sel.active.character) {
+              applyingEdit = true;
+              try {
+                const pos = new vscode.Position(sel.active.line, character);
+                editor.selection = new vscode.Selection(pos, pos);
+              } finally {
+                applyingEdit = false;
+              }
+            }
+          }
+        }
+        const anchor = captureCursorAnchor(
+          doc,
+          collapsedBlock,
+          editor.selection.active
+        );
         prevCollapsed.cursorLine = anchor.line;
         prevCollapsed.titleIndex = anchor.titleIndex;
       }
@@ -399,7 +490,11 @@ async function onSelectionChange(e: vscode.TextEditorSelectionChangeEvent): Prom
     selectionOnBoxMiddleRow(doc, sel, block) &&
     !activeCollapsed.has(key);
 
-  if (clickingExpandedBox) {
+  const prevLine = lastCursorLine.get(key);
+  if (
+    clickingExpandedBox &&
+    shouldCollapseExpandedBox(e, doc, block, cursorLine, prevLine)
+  ) {
     if (skipCollapseOnce) {
       skipCollapseOnce = false;
     } else {
@@ -423,6 +518,7 @@ async function onSelectionChange(e: vscode.TextEditorSelectionChangeEvent): Prom
     });
   }
   } finally {
+    lastCursorLine.set(key, editor.selection.active.line);
     updateEditorContexts(editor);
   }
 }
@@ -488,7 +584,12 @@ async function refreshAllBoxes(editor: vscode.TextEditor): Promise<void> {
       continue;
     }
     const lines = extractLinesFromBlock(editor.document, fresh);
-    const rendered = renderBoxLines(lines, fresh.style, fresh.overrides);
+    const rendered = renderBoxLines(
+      lines,
+      fresh.style,
+      fresh.overrides,
+      blockIndent(editor.document, fresh)
+    );
     const current: string[] = [];
     for (let l = fresh.startLine; l <= fresh.endLine; l++) {
       current.push(editor.document.lineAt(l).text);
@@ -536,7 +637,12 @@ async function normalizeOrphanBoxes(doc: vscode.TextDocument): Promise<void> {
       return;
     }
     const lines = extractLinesFromBlock(doc, block);
-    const rendered = renderBoxLines(lines, block.style, block.overrides);
+    const rendered = renderBoxLines(
+      lines,
+      block.style,
+      block.overrides,
+      blockIndent(doc, block)
+    );
     const current: string[] = [];
     for (let l = block.startLine; l <= block.endLine; l++) {
       current.push(doc.lineAt(l).text);
@@ -641,4 +747,5 @@ export function deactivate(): void {
   activeCollapsed.clear();
   activeBox.clear();
   activeMarkerDraft.clear();
+  lastCursorLine.clear();
 }

@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.2.1
+
+- Preserve leading indentation on expanded boxes and collapsed markers
+- Arrow keys enter collapsed edit mode when moving onto a box title from outside (no cursor loop between rows)
+- Clamp arrow navigation inside marker brackets for indented headers
+- Exit placement accounts for the two extra box border lines when leaving collapsed edit downward
+
 ## 0.2.0
 
 - Defer expanding `// >[text]` until the marker has a closing `]` and the cursor leaves the line (or the editor blurs)

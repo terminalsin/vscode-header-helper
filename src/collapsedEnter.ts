@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import {
+  blockIndent,
   findMarkerBlockAt,
   isPendingMarkerLine,
   markerLineBase,
@@ -66,7 +67,8 @@ async function insertNewMarkerLine(
     return;
   }
 
-  const template = newMarkerLineTemplate(block.style);
+  const indent = blockIndent(doc, block);
+  const template = newMarkerLineTemplate(block.style, indent);
   const close = markerLineCloseSuffix(block.style);
   const lineText = doc.lineAt(lineNum).text;
 
@@ -98,7 +100,7 @@ async function insertNewMarkerLine(
     );
 
     if (inner.length > 0) {
-      const newLineText = `${markerLineBase(block.style)}${inner}${close}`;
+      const newLineText = `${indent}${markerLineBase(block.style)}${inner}${close}`;
 
       await editor.edit((eb) => {
         eb.replace(

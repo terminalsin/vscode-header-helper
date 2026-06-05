@@ -9,6 +9,30 @@ import {
   linesInRange,
 } from "./box";
 
+export interface CursorPlacement {
+  linesBelowEnd?: number;
+  character?: number;
+}
+
+function collapsedExitPlacement(
+  exitPos: vscode.Position,
+  collapsed: CollapsedState
+): { placeCursor: "below" | "preserve"; placement?: CursorPlacement } {
+  if (exitPos.line < collapsed.startLine) {
+    return { placeCursor: "preserve" };
+  }
+  if (exitPos.line > collapsed.endLine) {
+    return {
+      placeCursor: "below",
+      placement: {
+        linesBelowEnd: exitPos.line - collapsed.endLine - 1,
+        character: exitPos.character,
+      },
+    };
+  }
+  return { placeCursor: "below", placement: { linesBelowEnd: 0 } };
+}
+
 export interface CollapsedState {
   startLine: number;
   endLine: number;
@@ -31,10 +55,15 @@ export interface PendingHeaderState {
     editor: vscode.TextEditor,
     block: BoxBlock,
     cursor?: { line: number; titleIndex: number },
-    placeCursor?: boolean | "below",
-    restoreRendered?: string[]
+    placeCursor?: boolean | "below" | "preserve",
+    restoreRendered?: string[],
+    placement?: CursorPlacement
   ) => Promise<void>;
-  placeCursorBelowBox: (editor: vscode.TextEditor, block: BoxBlock) => void;
+  placeCursorBelowBox: (
+    editor: vscode.TextEditor,
+    block: BoxBlock,
+    placement?: CursorPlacement
+  ) => void;
   finalizeCommit: (editor: vscode.TextEditor) => void;
 }
 
@@ -82,6 +111,11 @@ export async function commitPendingHeaderEdits(
             ? collapsed.savedRendered
             : undefined;
 
+        const { placeCursor, placement } = collapsedExitPlacement(
+          editor.selection.active,
+          collapsed
+        );
+
         state.setApplyingEdit(true);
         try {
           const onlyCollapseChangedDoc =
@@ -99,7 +133,9 @@ export async function commitPendingHeaderEdits(
                 restoreRendered
               )
             ) {
-              state.placeCursorBelowBox(editor, restored);
+              if (placeCursor === "below") {
+                state.placeCursorBelowBox(editor, restored, placement);
+              }
               committed = true;
             } else {
               await state.expandBlock(
@@ -109,8 +145,9 @@ export async function commitPendingHeaderEdits(
                   line: collapsed.cursorLine,
                   titleIndex: collapsed.titleIndex,
                 },
-                "below",
-                restoreRendered
+                placeCursor,
+                restoreRendered,
+                placement
               );
               committed = true;
             }
@@ -122,8 +159,9 @@ export async function commitPendingHeaderEdits(
                 line: collapsed.cursorLine,
                 titleIndex: collapsed.titleIndex,
               },
-              "below",
-              restoreRendered
+              placeCursor,
+              restoreRendered,
+              placement
             );
             committed = true;
           }

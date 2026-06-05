@@ -77,6 +77,16 @@ export function labelStartInInner(width: number, labelLength: number, align: Box
   return Math.floor((width - len) / 2);
 }
 
+/** Leading whitespace (tabs/spaces) before the comment on a line. */
+export function leadingIndent(line: string): string {
+  const m = line.match(/^(\s*)/);
+  return m ? m[1] : "";
+}
+
+export function blockIndent(doc: vscode.TextDocument, block: BoxBlock): string {
+  return leadingIndent(doc.lineAt(block.startLine).text);
+}
+
 export function commentAffixes(style: CommentStyle): { prefix: string; suffix: string } {
   if (style === "//") {
     return { prefix: "// ", suffix: "" };
@@ -90,7 +100,8 @@ export function commentAffixes(style: CommentStyle): { prefix: string; suffix: s
 export function renderBoxLines(
   lines: string[],
   style: CommentStyle,
-  overrides?: BoxOverrides
+  overrides?: BoxOverrides,
+  indent = ""
 ): string[] {
   const { length: innerWidth, align, uppercase } = resolveBoxOptions(overrides);
   const bar = "═".repeat(innerWidth);
@@ -100,7 +111,9 @@ export function renderBoxLines(
     const label = uppercase ? raw.toUpperCase() : raw;
     return `${prefix}║${formatLabel(label, innerWidth, align)}║${suffix}`;
   });
-  return [`${prefix}╔${bar}╗${suffix}`, ...mids, `${prefix}╚${bar}╝${suffix}`];
+  return [`${prefix}╔${bar}╗${suffix}`, ...mids, `${prefix}╚${bar}╝${suffix}`].map(
+    (line) => `${indent}${line}`
+  );
 }
 
 /** Collapsed marker prefix with an open `[` for typing (e.g. `// >[`). */
@@ -117,14 +130,14 @@ export function markerLineCloseSuffix(style: CommentStyle): string {
 }
 
 /** Full blank marker row with closing bracket (e.g. `// >[]`). */
-export function newMarkerLineTemplate(style: CommentStyle): {
+export function newMarkerLineTemplate(style: CommentStyle, indent = ""): {
   line: string;
   cursorCol: number;
 } {
   const base = markerLineBase(style);
   return {
-    line: base + markerLineCloseSuffix(style),
-    cursorCol: markerBraceCursorColumn(base),
+    line: indent + base + markerLineCloseSuffix(style),
+    cursorCol: indent.length + markerBraceCursorColumn(base),
   };
 }
 
@@ -162,14 +175,15 @@ export function ensureMarkerCloseBracket(lineText: string): string {
 export function markerLines(
   lines: string[],
   style: CommentStyle,
-  overrides?: BoxOverrides
+  overrides?: BoxOverrides,
+  indent = ""
 ): string[] {
   const { prefix, suffix } = commentAffixes(style);
   const opts = serializeOverrides(overrides);
   return lines.map((text, i) => {
     const optSuffix = i === lines.length - 1 ? opts : "";
     const title = normalizeMarkerTitle(text);
-    return `${prefix}>[${title}]${optSuffix}${suffix}`;
+    return `${indent}${prefix}>[${title}]${optSuffix}${suffix}`;
   });
 }
 
