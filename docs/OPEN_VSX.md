@@ -30,10 +30,15 @@ npx ovsx publish header-helper-0.2.0.vsix -p YOUR_TOKEN
 
 ## Publish via GitHub Actions
 
-1. Add repository secret **OVSX_PAT** (Settings → Secrets and variables → Actions).
-2. Push a version tag or run the workflow manually:
-   - Tag: `git tag v0.2.0 && git push origin v0.2.0`
+1. Create a [Personal Access Token](https://open-vsx.org/user-settings/tokens) with publish scope for namespace **blackswan**.
+2. Add repository secret **OVSX_PAT** (GitHub repo → Settings → Secrets and variables → Actions → New repository secret).
+3. Push a version tag or run the workflow manually:
+   - Tag: `git tag v0.2.1 && git push origin v0.2.1`
    - Manual: Actions → **Publish to Open VSX** → **Run workflow**
+
+The workflow fails fast if `OVSX_PAT` is missing. After a successful run, confirm the version at:
+
+https://open-vsx.org/api/blackswan/header-helper/versions
 
 After publish, the extension appears at:
 

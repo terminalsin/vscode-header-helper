@@ -22,4 +22,9 @@ jobs:
       - name: Publish to Open VSX
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
-        run: npm run publish:openvsx
+        run: |
+          if [ -z "$OVSX_PAT" ]; then
+            echo "::error::OVSX_PAT repository secret is not set. Add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          npx ovsx publish -p "$OVSX_PAT"
